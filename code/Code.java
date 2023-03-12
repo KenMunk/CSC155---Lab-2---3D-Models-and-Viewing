@@ -23,6 +23,7 @@ public class Code extends JFrame implements GLEventListener
 	// allocate variables for display() function
 	private FloatBuffer vals = Buffers.newDirectFloatBuffer(16);
 	private Matrix4fStack mvStack = new Matrix4fStack(5);
+	private Matrix4f viewMatrix = new Matrix4f();
 	private Matrix4f pMat = new Matrix4f();
 	private int mvLoc, pLoc;
 	private float aspect;
@@ -69,7 +70,7 @@ public class Code extends JFrame implements GLEventListener
 		
 		tf = elapsedTime/1000.0;  // time factor
 		
-		/*
+		//*
 		// ----------------------  pyramid == sun  
 		mvStack.pushMatrix();
 		mvStack.translate(0.0f, 0.0f, 0.0f);
@@ -94,7 +95,7 @@ public class Code extends JFrame implements GLEventListener
 		gl.glEnableVertexAttribArray(0);
 		gl.glDrawArrays(GL_TRIANGLES, 0, 36);
 		mvStack.popMatrix();
-
+		/*
 		//-----------------------  smaller cube == moon
 		mvStack.pushMatrix();
 		mvStack.translate(0.0f, (float)Math.sin(tf)*2.0f, (float)Math.cos(tf)*2.0f);
