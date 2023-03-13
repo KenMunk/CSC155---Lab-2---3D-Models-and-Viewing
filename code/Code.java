@@ -61,10 +61,13 @@ public class Code extends JFrame implements GLEventListener
 		mvStack.pushMatrix();
 		//So this translates the camera
 		
-		cameraRotation += 0.01f;
-		/*
-		cameraRotation %= 10;
-		mvStack.rotate((float)tf, cameraRotation, 0f, 0f);
+		cameraRotation += 0.005f;
+		//*
+		cameraRotation %= 6.28319;
+		float pane = 0f;
+		float pitch = 0f;
+		float yaw = cameraRotation;
+		mvStack.rotate(cameraRotation, 0f, 0f, 1f);
 		//*/
 		mvStack.translate(-cameraX, -cameraY, -cameraZ);
 		
@@ -106,7 +109,10 @@ public class Code extends JFrame implements GLEventListener
 		gl.glVertexAttribPointer(0, 3, GL_FLOAT, false, 0, 0);
 		gl.glEnableVertexAttribArray(0);
 		gl.glDrawArrays(GL_TRIANGLES, 0, 36);
-		mvStack.popMatrix();  mvStack.popMatrix();  mvStack.popMatrix();
+		mvStack.popMatrix();  
+		*/
+		mvStack.popMatrix();  
+		mvStack.popMatrix();
 		//*/
 		mvStack.popMatrix();
 	}
