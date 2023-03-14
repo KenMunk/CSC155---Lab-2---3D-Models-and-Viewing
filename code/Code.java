@@ -2,7 +2,9 @@ package code;
 
 import java.nio.*;
 import java.lang.Math;
+
 import javax.swing.*;
+
 import static com.jogamp.opengl.GL4.*;
 import com.jogamp.opengl.*;
 import com.jogamp.opengl.awt.GLCanvas;
@@ -29,6 +31,13 @@ public class Code extends JFrame implements GLEventListener
 	private float aspect;
 	private double tf;
 	private float cameraRotation = 0;
+	
+	private float camYaw = 0f; //Side to side
+	private float camPitch = 0f; //up down
+	private float camRoll = 0f; //roll screen
+	
+	AxisKeyState pitchKeys;
+	AxisKeyState yawKeys;
 
 	public Code()
 	{	setTitle("Chapter 4 - program 4");
@@ -39,8 +48,33 @@ public class Code extends JFrame implements GLEventListener
 		this.setVisible(true);
 		Animator animator = new Animator(myCanvas);
 		animator.start();
+		
+		pitchKeys = new AxisKeyState(0.1f,"w","s");
+		yawKeys = new AxisKeyState(0.1f, "d","a");
+		
+		this.addKeyListener(pitchKeys);
+		this.addKeyListener(yawKeys);
+		
+		/*
+			Strategy:
+			
+			instead of trying to use the key listeners which don't seem to work here, we'll use the KeyStroke system which will 
+			
+			https://docs.oracle.com/javase/7/docs/api/java/awt/event/KeyAdapter.html
+			
+			https://docs.oracle.com/javase/8/javafx/api/javafx/scene/input/KeyCode.html
+			
+			https://docs.oracle.com/javase/7/docs/api/java/awt/AWTKeyStroke.html
+			
+			https://docs.oracle.com/javase/7/docs/api/javax/swing/KeyStroke.html#getKeyStroke(char,%20boolean)
+			
+			
+		
+		
+		//*/
+		
 	}
-
+	
 	public void display(GLAutoDrawable drawable)
 	{	GL4 gl = (GL4) GLContext.getCurrentGL();
 		gl.glClear(GL_COLOR_BUFFER_BIT);
@@ -60,14 +94,17 @@ public class Code extends JFrame implements GLEventListener
 		// push view matrix onto the stack
 		mvStack.pushMatrix();
 		//So this translates the camera
-		
-		cameraRotation += 0.005f;
 		//*
-		cameraRotation %= 6.28319;
-		float pane = 0f;
-		float pitch = 0f;
-		float yaw = cameraRotation;
-		mvStack.rotate(cameraRotation, 0f, 0f, 1f);
+		//Camera rotation radians needs to be done as a mod of 6.28319
+		//in order to ensure that the camera completes a full circle
+		cameraRotation = 6.28319f;
+		
+		camYaw = (camYaw + yawKeys.getValue())%cameraRotation; //Side to side
+		camPitch = 0f; //up down
+		camRoll = 0f; //roll screen
+		
+		mvStack.rotate(camYaw, 0f, 1f, 0f);
+		mvStack.rotate(camPitch, 1f, 0f, 0f);
 		//*/
 		mvStack.translate(-cameraX, -cameraY, -cameraZ);
 		
