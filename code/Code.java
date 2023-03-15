@@ -5,6 +5,10 @@ import java.lang.Math;
 
 import javax.swing.*;
 
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
+
 import static com.jogamp.opengl.GL4.*;
 import com.jogamp.opengl.*;
 import com.jogamp.opengl.awt.GLCanvas;
@@ -36,8 +40,9 @@ public class Code extends JFrame implements GLEventListener
 	private float camPitch = 0f; //up down
 	private float camRoll = 0f; //roll screen
 	
-	AxisKeyState pitchKeys;
-	AxisKeyState yawKeys;
+	private AxisState pitchAxis = new AxisState(0.1f);
+	private AxisState yawAxis = new AxisState(0.1f);
+	
 
 	public Code()
 	{	setTitle("Chapter 4 - program 4");
@@ -49,11 +54,49 @@ public class Code extends JFrame implements GLEventListener
 		Animator animator = new Animator(myCanvas);
 		animator.start();
 		
-		pitchKeys = new AxisKeyState(0.1f,"w","s");
-		yawKeys = new AxisKeyState(0.1f, "d","a");
-		
-		this.addKeyListener(pitchKeys);
-		this.addKeyListener(yawKeys);
+		this.addKeyListener(new KeyAdapter() {
+			
+			public void keyPressed(KeyEvent e){
+				
+				if(e.getKeyCode() == KeyEvent.VK_W){
+					pitchAxis.pressUp();
+					
+				}
+				
+				if(e.getKeyCode() == KeyEvent.VK_S){
+					pitchAxis.pressDown();
+				}
+				
+				if(e.getKeyCode() == KeyEvent.VK_A){
+					yawAxis.pressUp();
+				}
+				
+				if(e.getKeyCode() == KeyEvent.VK_D){
+					yawAxis.pressDown();
+				}
+			}
+			
+			public void keyReleased(KeyEvent e){
+				
+				if(e.getKeyCode() == KeyEvent.VK_W){
+					pitchAxis.releaseUp();
+				}
+				
+				if(e.getKeyCode() == KeyEvent.VK_S){
+					pitchAxis.releaseDown();
+				}
+				
+				if(e.getKeyCode() == KeyEvent.VK_A){
+					yawAxis.releaseUp();
+				}
+				
+				if(e.getKeyCode() == KeyEvent.VK_D){
+					yawAxis.releaseDown();
+				}
+				
+			}
+			
+		});
 		
 		/*
 			Strategy:
@@ -99,8 +142,8 @@ public class Code extends JFrame implements GLEventListener
 		//in order to ensure that the camera completes a full circle
 		cameraRotation = 6.28319f;
 		
-		camYaw = (camYaw + yawKeys.getValue())%cameraRotation; //Side to side
-		camPitch = 0f; //up down
+		camYaw = (camYaw + yawAxis.getValue())%cameraRotation; //Side to side
+		camPitch = (camPitch + pitchAxis.getValue())%cameraRotation; //up down
 		camRoll = 0f; //roll screen
 		
 		mvStack.rotate(camYaw, 0f, 1f, 0f);
