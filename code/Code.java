@@ -40,8 +40,11 @@ public class Code extends JFrame implements GLEventListener
 	private float camPitch = 0f; //up down
 	private float camRoll = 0f; //roll screen
 	
-	private AxisState pitchAxis = new AxisState(0.1f);
-	private AxisState yawAxis = new AxisState(0.1f);
+	private AxisState fwdAxis = new AxisState(0.1f, KeyEvent.VK_W, KeyEvent.VK_S);
+	private AxisState sideAxis = new AxisState(0.1f, KeyEvent.VK_D, KeyEvent.VK_A);
+	private AxisState verticalAxis = new AxisState(0.1f, KeyEvent.VK_Q, KeyEvent.VK_E);
+	private AxisState pitchTurnAxis = new AxisState(0.01f, KeyEvent.VK_UP, KeyEvent.VK_DOWN);
+	private AxisState yawTurnAxis = new AxisState(0.01f, KeyEvent.VK_LEFT, KeyEvent.VK_RIGHT);
 	
 
 	public Code()
@@ -58,41 +61,23 @@ public class Code extends JFrame implements GLEventListener
 			
 			public void keyPressed(KeyEvent e){
 				
-				if(e.getKeyCode() == KeyEvent.VK_W){
-					pitchAxis.pressUp();
-					
-				}
+				pitchTurnAxis.pressCheck(e.getKeyCode());
+				yawTurnAxis.pressCheck(e.getKeyCode());
 				
-				if(e.getKeyCode() == KeyEvent.VK_S){
-					pitchAxis.pressDown();
-				}
+				fwdAxis.pressCheck(e.getKeyCode());
+				sideAxis.pressCheck(e.getKeyCode());
+				verticalAxis.pressCheck(e.getKeyCode());
 				
-				if(e.getKeyCode() == KeyEvent.VK_A){
-					yawAxis.pressUp();
-				}
-				
-				if(e.getKeyCode() == KeyEvent.VK_D){
-					yawAxis.pressDown();
-				}
 			}
 			
 			public void keyReleased(KeyEvent e){
 				
-				if(e.getKeyCode() == KeyEvent.VK_W){
-					pitchAxis.releaseUp();
-				}
+				pitchTurnAxis.releaseCheck(e.getKeyCode());
+				yawTurnAxis.releaseCheck(e.getKeyCode());
 				
-				if(e.getKeyCode() == KeyEvent.VK_S){
-					pitchAxis.releaseDown();
-				}
-				
-				if(e.getKeyCode() == KeyEvent.VK_A){
-					yawAxis.releaseUp();
-				}
-				
-				if(e.getKeyCode() == KeyEvent.VK_D){
-					yawAxis.releaseDown();
-				}
+				fwdAxis.releaseCheck(e.getKeyCode());
+				sideAxis.releaseCheck(e.getKeyCode());
+				verticalAxis.releaseCheck(e.getKeyCode());
 				
 			}
 			
@@ -142,13 +127,17 @@ public class Code extends JFrame implements GLEventListener
 		//in order to ensure that the camera completes a full circle
 		cameraRotation = 6.28319f;
 		
-		camYaw = (camYaw + yawAxis.getValue())%cameraRotation; //Side to side
-		camPitch = (camPitch + pitchAxis.getValue())%cameraRotation; //up down
+		camYaw = (camYaw + yawTurnAxis.getValue())%cameraRotation; //Side to side
+		camPitch = (camPitch + pitchTurnAxis.getValue())%cameraRotation; //up down
 		camRoll = 0f; //roll screen
 		
 		mvStack.rotate(camYaw, 0f, 1f, 0f);
 		mvStack.rotate(camPitch, 1f, 0f, 0f);
 		//*/
+		cameraZ += fwdAxis.getValue();
+		cameraY += verticalAxis.getValue();
+		cameraX += sideAxis.getValue();
+		
 		mvStack.translate(-cameraX, -cameraY, -cameraZ);
 		
 		tf = elapsedTime/1000.0;  // time factor
