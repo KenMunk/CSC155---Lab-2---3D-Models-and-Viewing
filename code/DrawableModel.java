@@ -17,6 +17,7 @@ public class DrawableModel{
 	
 	private Vector3f globalPosition;
 	private Vector3f rotation;
+	private Vector3f scale;
 	
 	private String modelPath;
 	private String primaryTexturePath;
@@ -38,6 +39,7 @@ public class DrawableModel{
 		
 		this.globalPosition = new Vector3f(0f,0f,0f);
 		this.rotation = new Vector3f(0f,0f,0f);
+		this.scale = new Vector3f(1f,1f,1f);
 		
 		this.renderingProgram = renderingProgram;
 	}
@@ -106,6 +108,16 @@ public class DrawableModel{
 		this.rotation = new Vector3f(x,y,z);
 	}
 	
+	public void setScale(Vector3f scale){
+		
+		this.scale = scale;
+		
+	}
+	
+	public void addScale(Vector3f scale){
+		this.scale.add(scale);
+	}
+	
 	public Vector3f getPosition(){
 		return(this.globalPosition);
 	}
@@ -133,8 +145,15 @@ public class DrawableModel{
 		
 		modelMatrix.identity();
 		
+		
+		modelMatrix.rotate(this.getRotation().x(),1f,0,0);
+		modelMatrix.rotate(this.getRotation().y(),0,1f,0);
+		modelMatrix.rotate(this.getRotation().z(),0,0,1f);
+		
+		
 		modelMatrix.translate(this.getPosition());
-		modelMatrix.rotate(1f,this.getRotation());
+		
+		modelMatrix.scale(this.scale);
 		
 		return(modelMatrix);
 	}
@@ -158,8 +177,8 @@ public class DrawableModel{
 		int mvLoc = gl.glGetUniformLocation(renderingProgram, "mv_matrix");
 		int pLoc = gl.glGetUniformLocation(renderingProgram, "p_matrix");
 		
-		Matrix4f mvMat = this.createModelMatrix();
-		mvMat.mul(viewMat);
+		Matrix4f mvMat = viewMat;
+		viewMat.mul(this.createModelMatrix());
 		
 		gl.glUniformMatrix4fv(mvLoc, 1, false, mvMat.get(vals));
 		gl.glUniformMatrix4fv(pLoc, 1, false, perspectiveMat.get(vals));

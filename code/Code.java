@@ -45,6 +45,8 @@ public class Code extends JFrame implements GLEventListener
 	private float cameraRotation = 0;
 	
 	private DrawableModel anvil;
+	private DrawableModel caltrop;
+	private DrawableModel glaidus;
 	
 	private float camYaw = 0f; //Side to side
 	private float camPitch = 0f; //up down
@@ -172,88 +174,39 @@ public class Code extends JFrame implements GLEventListener
 		
 		//Then push rotations
 		mvStack.pushMatrix();
-		
-		//rotations can be done as rotate(1f, rotation vector3);
-		mvStack.rotate((float)tf*2, new Vector3f(1.0f, 0.0f, 0.0f));
-		
-		gl.glUniformMatrix4fv(mvLoc, 1, false, mvStack.get(vals));
-		gl.glBindBuffer(GL_ARRAY_BUFFER, vbo[1]);
-		gl.glVertexAttribPointer(0, 3, GL_FLOAT, false, 0, 0);
-		gl.glEnableVertexAttribArray(0);
-		gl.glEnable(GL_DEPTH_TEST);
-		gl.glDrawArrays(GL_TRIANGLES, 0, 18); 
 		mvStack.popMatrix();
 		mvStack.popMatrix();
-		
-		//-----------------------  cube == planet  
+		//-----------------------  cube == planet  -- converted to 4-face pyramid
 		mvStack.pushMatrix();
 		mvStack.translate((float)Math.sin(tf)*4.0f, 0.0f, (float)Math.cos(tf)*4.0f);
 		mvStack.pushMatrix();
 		mvStack.rotate((float)tf*0.5f, 0.0f, 1.0f, 0.0f);
 		gl.glUniformMatrix4fv(mvLoc, 1, false, mvStack.get(vals));
-		gl.glBindBuffer(GL_ARRAY_BUFFER, vbo[0]);
+		gl.glBindBuffer(GL_ARRAY_BUFFER, vbo[1]);
 		gl.glVertexAttribPointer(0, 3, GL_FLOAT, false, 0, 0);
 		gl.glEnableVertexAttribArray(0);
-		gl.glDrawArrays(GL_TRIANGLES, 0, 36);
+		gl.glDrawArrays(GL_TRIANGLES, 0, 12);
+		
 		mvStack.popMatrix();
-		/*
-		//-----------------------  smaller cube == moon
-		mvStack.pushMatrix();
-		mvStack.translate(0.0f, (float)Math.sin(tf)*2.0f, (float)Math.cos(tf)*2.0f);
-		mvStack.rotate((float)tf, 0.0f, 0.0f, 1.0f);
-		mvStack.scale(0.25f, 0.25f, 0.25f);
-		gl.glUniformMatrix4fv(mvLoc, 1, false, mvStack.get(vals));
-		gl.glBindBuffer(GL_ARRAY_BUFFER, vbo[0]);
-		gl.glVertexAttribPointer(0, 3, GL_FLOAT, false, 0, 0);
-		gl.glEnableVertexAttribArray(0);
-		gl.glDrawArrays(GL_TRIANGLES, 0, 36);
-		mvStack.popMatrix();  
-		*/  
 		mvStack.popMatrix();
 		
 		anvil.render(mvStack,pMat);
+		
+		glaidus.render(mvStack,pMat);
+		
+		caltrop.rotate(new Vector3f(0,0.01f,0));
+		caltrop.setScale(new Vector3f((float)Math.sin(tf)*0.5f,(float)Math.sin(tf)*0.5f,(float)Math.sin(tf)*0.5f));
+		
+		caltrop.render(mvStack,pMat);
+		
+		caltrop.translate(new Vector3f(-4f,0,0));
+		
+		caltrop.render(mvStack,pMat);
+		caltrop.translate(new Vector3f(4f,0,0));
+		
 		//*/
 		mvStack.popMatrix();
 		
-		/*//Process of rendering a .obj model according to chapter 6
-		
-		
-		vMat.identity().setTranslation(-cameraX,-cameraY,-cameraZ);
-
-		mMat.identity();
-		mMat.translate(objLocX, objLocY, objLocZ);
-
-		mMat.rotateX((float)Math.toRadians(20.0f));
-		mMat.rotateY((float)Math.toRadians(130.0f));
-		mMat.rotateZ((float)Math.toRadians(5.0f));
-
-		mvMat.identity();
-		mvMat.mul(vMat);
-		mvMat.mul(mMat);
-
-		gl.glUniformMatrix4fv(mvLoc, 1, false, mvMat.get(vals));
-		gl.glUniformMatrix4fv(pLoc, 1, false, pMat.get(vals));
-		
-		//bind vector buffer
-		gl.glBindBuffer(GL_ARRAY_BUFFER, vbo[0]);
-		gl.glVertexAttribPointer(0, 3, GL_FLOAT, false, 0, 0);
-		gl.glEnableVertexAttribArray(0);
-		
-		//bind texture buffer
-		gl.glBindBuffer(GL_ARRAY_BUFFER, vbo[1]);
-		gl.glVertexAttribPointer(1, 2, GL_FLOAT, false, 0, 0);
-		gl.glEnableVertexAttribArray(1);
-		
-		//Bind texture
-		gl.glActiveTexture(GL_TEXTURE0);
-		gl.glBindTexture(GL_TEXTURE_2D, shuttleTexture);
-		
-		//Then Render
-		gl.glEnable(GL_DEPTH_TEST);
-		gl.glDepthFunc(GL_LEQUAL);
-		gl.glDrawArrays(GL_TRIANGLES, 0, myModel.getNumVertices());
-		
-		//*/
 	}
 
 	public void init(GLAutoDrawable drawable)
@@ -266,18 +219,10 @@ public class Code extends JFrame implements GLEventListener
 		/*//It seems that models and textures are loaded during initialization...
 		//(Program 6 Shuttle loader)
 		
-		myModel = new ImportedModel("shuttle.obj");
-		
-		shuttleTexture = Utils.loadTexture("spstob_1.jpg");
-		
-		objLocX = 0.0f; objLocY = 0.0f; objLocZ = 0.0f;
 		//*/
 		
 		
 		/*//The perspective matrix is also setup here (Program 6 Shuttle loader)
-		
-		float aspect = (float) myCanvas.getWidth() / (float) myCanvas.getHeight();
-		pMat.identity().setPerspective((float) Math.toRadians(60.0f), aspect, 0.1f, 1000.0f);
 		
 		//*/
 		
@@ -290,9 +235,24 @@ public class Code extends JFrame implements GLEventListener
 		
 		//importing obj models
 		anvil = (new DrawableModel("Anvil--02--Triangulated.obj","Anvil_Laptop_Sleeve.png", simpleObjRenderer));
+		
+		caltrop = (new DrawableModel("CaltropStar.obj","castleroof.jpg", simpleObjRenderer));
+		
+		//Texture Source http://texturelib.com/texture/?path=/Textures/metal/bare/metal_bare_0012
+		
+		glaidus = new DrawableModel("Gladius_Single.obj","metal_bare_0012_01_s.jpg",simpleObjRenderer);
+		
 		anvil.loadModelData();
 		anvil.setupVertices(vao,0);
 		
+		caltrop.loadModelData();
+		caltrop.setupVertices(vao,0);
+		caltrop.translate(new Vector3f(2f,10f,0f));
+		
+		glaidus.loadModelData();
+		glaidus.setupVertices(vao,0);
+		glaidus.translate(new Vector3f(0,5f,0f));
+		glaidus.setScale(new Vector3f(0.2f,0.2f,0.2f));
 		
 		cameraX = 0.0f; cameraY = 0.0f; cameraZ = 12.0f;
 	}
@@ -301,46 +261,6 @@ public class Code extends JFrame implements GLEventListener
 	{	GL4 gl = (GL4) GLContext.getCurrentGL();
 		
 		/*//Process for preparing a .obj file from chapter 6
-		
-		numObjVertices = myModel.getNumVertices();
-		Vector3f[] vertices = myModel.getVertices();
-		Vector2f[] texCoords = myModel.getTexCoords();
-		Vector3f[] normals = myModel.getNormals();
-		
-		float[] pvalues = new float[numObjVertices*3];
-		float[] tvalues = new float[numObjVertices*2];
-		float[] nvalues = new float[numObjVertices*3];
-		
-		for (int i=0; i<numObjVertices; i++)
-		{	pvalues[i*3]   = (float) (vertices[i]).x();
-			pvalues[i*3+1] = (float) (vertices[i]).y();
-			pvalues[i*3+2] = (float) (vertices[i]).z();
-			tvalues[i*2]   = (float) (texCoords[i]).x();
-			tvalues[i*2+1] = (float) (texCoords[i]).y();
-			nvalues[i*3]   = (float) (normals[i]).x();
-			nvalues[i*3+1] = (float) (normals[i]).y();
-			nvalues[i*3+2] = (float) (normals[i]).z();
-		}
-		
-		//VAO defined at the top of the program
-		gl.glGenVertexArrays(vao.length, vao, 0);
-		gl.glBindVertexArray(vao[0]);
-		gl.glGenBuffers(vbo.length, vbo, 0);
-		
-		//binding the vector position values to vbo
-		gl.glBindBuffer(GL_ARRAY_BUFFER, vbo[0]);
-		FloatBuffer vertBuf = Buffers.newDirectFloatBuffer(pvalues);
-		gl.glBufferData(GL_ARRAY_BUFFER, vertBuf.limit()*4, vertBuf, GL_STATIC_DRAW);
-		
-		//binding the texture values to vbo
-		gl.glBindBuffer(GL_ARRAY_BUFFER, vbo[1]);
-		FloatBuffer texBuf = Buffers.newDirectFloatBuffer(tvalues);
-		gl.glBufferData(GL_ARRAY_BUFFER, texBuf.limit()*4, texBuf, GL_STATIC_DRAW);
-		
-		//Binding normals to vbo
-		gl.glBindBuffer(GL_ARRAY_BUFFER, vbo[2]);
-		FloatBuffer norBuf = Buffers.newDirectFloatBuffer(nvalues);
-		gl.glBufferData(GL_ARRAY_BUFFER, norBuf.limit()*4,norBuf, GL_STATIC_DRAW);
 		
 		//*/
 		
@@ -361,12 +281,10 @@ public class Code extends JFrame implements GLEventListener
 		};
 		
 		float[] pyramidPositions =
-		{	-1.0f, -1.0f, 1.0f, 1.0f, -1.0f, 1.0f, 0.0f, 1.0f, 0.0f,    //front
-			1.0f, -1.0f, 1.0f, 1.0f, -1.0f, -1.0f, 0.0f, 1.0f, 0.0f,    //right
-			1.0f, -1.0f, -1.0f, -1.0f, -1.0f, -1.0f, 0.0f, 1.0f, 0.0f,  //back
-			-1.0f, -1.0f, -1.0f, -1.0f, -1.0f, 1.0f, 0.0f, 1.0f, 0.0f,  //left
-			-1.0f, -1.0f, -1.0f, 1.0f, -1.0f, 1.0f, -1.0f, -1.0f, 1.0f, //LF
-			1.0f, -1.0f, 1.0f, -1.0f, -1.0f, -1.0f, 1.0f, -1.0f, -1.0f  //RR
+		{	-1.0f, -1.0f, 1.0f, 1.0f, -1.0f, 1.0f, 0.0f, 1.0f, 0.0f,      //front
+			-1.0f, -1.0f, 1.0f, 1.0f, -1.0f, -1.0f, 0.0f, 1.0f, 0.0f,    //right
+			1.0f, -1.0f, -1.0f, 1.0f, -1.0f, 1.0f, 0.0f, 1.0f, 0.0f,  //left
+			1.0f, -1.0f, -1.0f, 1.0f, -1.0f, 1.0f, -1.0f, -1.0f, 1.0f, //LF
 		};
 
 		gl.glGenVertexArrays(vao.length, vao, 0);
