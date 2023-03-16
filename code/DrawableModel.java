@@ -13,7 +13,7 @@ import com.jogamp.common.nio.Buffers;
 import com.jogamp.opengl.GLContext;
 import org.joml.*;
 
-public abstract class DrawableModel{
+public class DrawableModel{
 	
 	private Vector3f globalPosition;
 	private Vector3f rotation;
@@ -24,11 +24,11 @@ public abstract class DrawableModel{
 	private ImportedModel model;
 	private int numObjVertices;
 	
-	private int modelVBO[] = new int[3];
+	private int vbo[] = new int[3];
 	
 	private int primaryModelTexture;
 	
-	private int renderingProgramBinding;
+	private int renderingProgram;
 	
 	public DrawableModel(String modelPath, String primaryTexturePath, int renderingProgram){
 		
@@ -39,7 +39,7 @@ public abstract class DrawableModel{
 		this.globalPosition = new Vector3f(0f,0f,0f);
 		this.rotation = new Vector3f(0f,0f,0f);
 		
-		this.renderingProgramBinding = renderingProgram;
+		this.renderingProgram = renderingProgram;
 	}
 	
 	public void loadModelData(){
@@ -76,13 +76,13 @@ public abstract class DrawableModel{
 		gl.glGenVertexArrays(vao.length, vao, 0);
 		//vaoIndex would typically be 0 for this class
 		gl.glBindVertexArray(vao[vaoIndex]);
-		gl.glGenBuffers(modelVBO.length, modelVBO, 0);
+		gl.glGenBuffers(vbo.length, vbo, 0);
 		
-		gl.glBindBuffer(GL_ARRAY_BUFFER, modelVBO[0]);
+		gl.glBindBuffer(GL_ARRAY_BUFFER, vbo[0]);
 		FloatBuffer vertBuf = Buffers.newDirectFloatBuffer(pvalues);
 		gl.glBufferData(GL_ARRAY_BUFFER, vertBuf.limit()*4, vertBuf, GL_STATIC_DRAW);
 
-		gl.glBindBuffer(GL_ARRAY_BUFFER, modelVBO[1]);
+		gl.glBindBuffer(GL_ARRAY_BUFFER, vbo[1]);
 		FloatBuffer texBuf = Buffers.newDirectFloatBuffer(tvalues);
 		gl.glBufferData(GL_ARRAY_BUFFER, texBuf.limit()*4, texBuf, GL_STATIC_DRAW);
 		
@@ -103,7 +103,7 @@ public abstract class DrawableModel{
 		y %= 6.28319f;
 		z %= 6.28319f;
 		
-		this.rotation = new Vector3(x,y,z);
+		this.rotation = new Vector3f(x,y,z);
 	}
 	
 	public Vector3f getPosition(){
@@ -117,12 +117,35 @@ public abstract class DrawableModel{
 	public void startRenderer(){
 		
 		GL4 gl = (GL4) GLContext.getCurrentGL();
-		gl.glUseProgram(this.renderingProgramBinding);
+		gl.glUseProgram(this.renderingProgram);
 	}
 	
-	public void render(Matrix4f viewMatrix){
+	public void bindTextures(){
 		
 		GL4 gl = (GL4) GLContext.getCurrentGL();
+		
+		gl.glActiveTexture(GL_TEXTURE0);
+		gl.glBindTexture(GL_TEXTURE_2D, this.primaryModelTexture);
+	}
+	
+	public Matrix4f createModelMatrix(){
+		Matrix4f modelMatrix = new Matrix4f();
+		
+		modelMatrix.identity();
+		
+		modelMatrix.translate(this.getPosition());
+		modelMatrix.rotate(1f,this.getRotation());
+		
+		return(modelMatrix);
+	}
+	
+	public void render(Matrix4f viewMat, Matrix4f perspectiveMat){
+		
+		this.startRenderer();
+		
+		GL4 gl = (GL4) GLContext.getCurrentGL();
+		
+		FloatBuffer vals = Buffers.newDirectFloatBuffer(16);
 		
 		/*
 		
@@ -135,7 +158,11 @@ public abstract class DrawableModel{
 		int mvLoc = gl.glGetUniformLocation(renderingProgram, "mv_matrix");
 		int pLoc = gl.glGetUniformLocation(renderingProgram, "p_matrix");
 		
-		gl.glUniformMatrix4fv(mvLoc, 1, false, mvStack.get(mvMatrixBuffer));
+		Matrix4f mvMat = this.createModelMatrix();
+		mvMat.mul(viewMat);
+		
+		gl.glUniformMatrix4fv(mvLoc, 1, false, mvMat.get(vals));
+		gl.glUniformMatrix4fv(pLoc, 1, false, perspectiveMat.get(vals));
 		
 		gl.glBindBuffer(GL_ARRAY_BUFFER, vbo[0]);
 		gl.glVertexAttribPointer(0, 3, GL_FLOAT, false, 0, 0);
@@ -145,12 +172,11 @@ public abstract class DrawableModel{
 		gl.glVertexAttribPointer(1, 2, GL_FLOAT, false, 0, 0);
 		gl.glEnableVertexAttribArray(1);
 		
-		gl.glActiveTexture(GL_TEXTURE0);
-		gl.glBindTexture(GL_TEXTURE_2D, this.primaryModelTexture);
+		this.bindTextures();
 		
 		gl.glEnable(GL_DEPTH_TEST);
 		gl.glDepthFunc(GL_LEQUAL);
-		gl.glDrawArrays(GL_TRIANGLES, 0, myModel.getNumVertices());
+		gl.glDrawArrays(GL_TRIANGLES, 0, model.getNumVertices());
 		
 	}
 }

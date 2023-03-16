@@ -5,6 +5,8 @@ import java.lang.Math;
 
 import javax.swing.*;
 
+import java.util.ArrayList;
+
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
@@ -42,9 +44,13 @@ public class Code extends JFrame implements GLEventListener
 	private double tf;
 	private float cameraRotation = 0;
 	
+	private DrawableModel anvil;
+	
 	private float camYaw = 0f; //Side to side
 	private float camPitch = 0f; //up down
 	private float camRoll = 0f; //roll screen
+	
+	
 	
 	private AxisState fwdAxis = new AxisState(0.1f, KeyEvent.VK_W, KeyEvent.VK_S);
 	private AxisState sideAxis = new AxisState(0.1f, KeyEvent.VK_D, KeyEvent.VK_A);
@@ -120,8 +126,9 @@ public class Code extends JFrame implements GLEventListener
 
 		mvLoc = gl.glGetUniformLocation(renderingProgram, "mv_matrix");
 		pLoc = gl.glGetUniformLocation(renderingProgram, "p_matrix");
-
-		aspect = (float) myCanvas.getWidth() / (float) myCanvas.getHeight();
+		
+		//gl.glMatrixMode(GL_PROJECTION);
+		
 		pMat.identity().setPerspective((float) Math.toRadians(60.0f), aspect, 0.1f, 1000.0f);
 		gl.glUniformMatrix4fv(pLoc, 1, false, pMat.get(vals));
 		
@@ -203,6 +210,8 @@ public class Code extends JFrame implements GLEventListener
 		mvStack.popMatrix();  
 		*/  
 		mvStack.popMatrix();
+		
+		anvil.render(mvStack,pMat);
 		//*/
 		mvStack.popMatrix();
 		
@@ -249,6 +258,9 @@ public class Code extends JFrame implements GLEventListener
 
 	public void init(GLAutoDrawable drawable)
 	{	GL4 gl = (GL4) GLContext.getCurrentGL();
+	
+		aspect = (float) myCanvas.getWidth() / (float) myCanvas.getHeight();
+		
 		startTime = System.currentTimeMillis();
 		
 		/*//It seems that models and textures are loaded during initialization...
@@ -271,6 +283,17 @@ public class Code extends JFrame implements GLEventListener
 		
 		renderingProgram = Utils.createShaderProgram("code/vertShader.glsl", "code/fragShader.glsl");
 		setupVertices();
+		
+		int simpleObjRenderer = Utils.createShaderProgram(
+			"code/objVertShader.glsl", "code/objFragShader.glsl"
+		);
+		
+		//importing obj models
+		anvil = (new DrawableModel("Anvil--02--Triangulated.obj","Anvil_Laptop_Sleeve.png", simpleObjRenderer));
+		anvil.loadModelData();
+		anvil.setupVertices(vao,0);
+		
+		
 		cameraX = 0.0f; cameraY = 0.0f; cameraZ = 12.0f;
 	}
 
