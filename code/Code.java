@@ -63,6 +63,7 @@ public class Code extends JFrame implements GLEventListener
 		Animator animator = new Animator(myCanvas);
 		animator.start();
 		
+		//Control inputs
 		this.addKeyListener(new KeyAdapter() {
 			
 			public void keyPressed(KeyEvent e){
@@ -137,8 +138,15 @@ public class Code extends JFrame implements GLEventListener
 		camPitch = (camPitch + pitchTurnAxis.getValue())%cameraRotation; //up down
 		camRoll = 0f; //roll screen
 		
+		//Instead of having the angle assigned to the first values
+		//we can set the angle to 1f as the magnitude of change,
+		//and then assign a rotation angle to each axis
+		mvStack.rotate(1f,camPitch,camYaw,camRoll);
+		
+		/*
 		mvStack.rotate(camYaw, 0f, 1f, 0f);
 		mvStack.rotate(camPitch, 1f, 0f, 0f);
+		mvStack.rotate(camRoll,0f,0f,1f);
 		//*/
 		cameraZ += fwdAxis.getValue();
 		cameraY += verticalAxis.getValue();
@@ -150,10 +158,17 @@ public class Code extends JFrame implements GLEventListener
 		
 		//*
 		// ----------------------  pyramid == sun  
+		
+		//Push translation matrix
 		mvStack.pushMatrix();
 		mvStack.translate(0.0f, 0.0f, 0.0f);
+		
+		//Then push rotations
 		mvStack.pushMatrix();
-		mvStack.rotate((float)tf, 1.0f, 0.0f, 0.0f);
+		
+		//rotations can be done as rotate(1f, rotation vector3);
+		mvStack.rotate((float)tf*2, new Vector3f(1.0f, 0.0f, 0.0f));
+		
 		gl.glUniformMatrix4fv(mvLoc, 1, false, mvStack.get(vals));
 		gl.glBindBuffer(GL_ARRAY_BUFFER, vbo[1]);
 		gl.glVertexAttribPointer(0, 3, GL_FLOAT, false, 0, 0);
@@ -161,12 +176,13 @@ public class Code extends JFrame implements GLEventListener
 		gl.glEnable(GL_DEPTH_TEST);
 		gl.glDrawArrays(GL_TRIANGLES, 0, 18); 
 		mvStack.popMatrix();
+		mvStack.popMatrix();
 		
 		//-----------------------  cube == planet  
 		mvStack.pushMatrix();
 		mvStack.translate((float)Math.sin(tf)*4.0f, 0.0f, (float)Math.cos(tf)*4.0f);
 		mvStack.pushMatrix();
-		mvStack.rotate((float)tf, 0.0f, 1.0f, 0.0f);
+		mvStack.rotate((float)tf*0.5f, 0.0f, 1.0f, 0.0f);
 		gl.glUniformMatrix4fv(mvLoc, 1, false, mvStack.get(vals));
 		gl.glBindBuffer(GL_ARRAY_BUFFER, vbo[0]);
 		gl.glVertexAttribPointer(0, 3, GL_FLOAT, false, 0, 0);
@@ -185,8 +201,7 @@ public class Code extends JFrame implements GLEventListener
 		gl.glEnableVertexAttribArray(0);
 		gl.glDrawArrays(GL_TRIANGLES, 0, 36);
 		mvStack.popMatrix();  
-		*/
-		mvStack.popMatrix();  
+		*/  
 		mvStack.popMatrix();
 		//*/
 		mvStack.popMatrix();
