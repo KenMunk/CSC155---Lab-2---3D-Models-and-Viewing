@@ -1,4 +1,4 @@
-package code;
+package a2;
 
 import java.nio.*;
 import java.lang.Math;
@@ -137,6 +137,7 @@ public class DrawableModel{
 		GL4 gl = (GL4) GLContext.getCurrentGL();
 		
 		gl.glActiveTexture(GL_TEXTURE0);
+		gl.glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
 		gl.glBindTexture(GL_TEXTURE_2D, this.primaryModelTexture);
 	}
 	
@@ -177,8 +178,10 @@ public class DrawableModel{
 		int mvLoc = gl.glGetUniformLocation(renderingProgram, "mv_matrix");
 		int pLoc = gl.glGetUniformLocation(renderingProgram, "p_matrix");
 		
-		Matrix4f mvMat = viewMat;
-		viewMat.mul(this.createModelMatrix());
+		Matrix4f mvMat = new Matrix4f().identity();
+		mvMat.mul(viewMat);
+		mvMat.mul(this.createModelMatrix());
+		
 		
 		gl.glUniformMatrix4fv(mvLoc, 1, false, mvMat.get(vals));
 		gl.glUniformMatrix4fv(pLoc, 1, false, perspectiveMat.get(vals));
@@ -190,6 +193,8 @@ public class DrawableModel{
 		gl.glBindBuffer(GL_ARRAY_BUFFER, vbo[1]);
 		gl.glVertexAttribPointer(1, 2, GL_FLOAT, false, 0, 0);
 		gl.glEnableVertexAttribArray(1);
+		
+		gl.glEnable(GL_REPEAT);
 		
 		this.bindTextures();
 		

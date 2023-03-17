@@ -1,4 +1,4 @@
-package code;
+package a2;
 
 import java.nio.*;
 import java.lang.Math;
@@ -37,7 +37,6 @@ public class Code extends JFrame implements GLEventListener
 	// allocate variables for display() function
 	private FloatBuffer vals = Buffers.newDirectFloatBuffer(16);
 	private Matrix4fStack mvStack = new Matrix4fStack(5);
-	private Matrix4f viewMatrix = new Matrix4f();
 	private Matrix4f pMat = new Matrix4f();
 	private int mvLoc, pLoc;
 	private float aspect;
@@ -47,6 +46,7 @@ public class Code extends JFrame implements GLEventListener
 	private DrawableModel anvil;
 	private DrawableModel caltrop;
 	private DrawableModel glaidus;
+	private DrawableModel ringRune;
 	
 	private float camYaw = 0f; //Side to side
 	private float camPitch = 0f; //up down
@@ -54,11 +54,12 @@ public class Code extends JFrame implements GLEventListener
 	
 	
 	
-	private AxisState fwdAxis = new AxisState(0.1f, KeyEvent.VK_W, KeyEvent.VK_S);
+	private AxisState fwdAxis = new AxisState(0.1f, KeyEvent.VK_S, KeyEvent.VK_W);
 	private AxisState sideAxis = new AxisState(0.1f, KeyEvent.VK_D, KeyEvent.VK_A);
 	private AxisState verticalAxis = new AxisState(0.1f, KeyEvent.VK_Q, KeyEvent.VK_E);
 	private AxisState pitchTurnAxis = new AxisState(0.01f, KeyEvent.VK_UP, KeyEvent.VK_DOWN);
 	private AxisState yawTurnAxis = new AxisState(0.01f, KeyEvent.VK_LEFT, KeyEvent.VK_RIGHT);
+	boolean showAxis = true;
 	
 
 	public Code()
@@ -83,6 +84,7 @@ public class Code extends JFrame implements GLEventListener
 				sideAxis.pressCheck(e.getKeyCode());
 				verticalAxis.pressCheck(e.getKeyCode());
 				
+				
 			}
 			
 			public void keyReleased(KeyEvent e){
@@ -94,6 +96,9 @@ public class Code extends JFrame implements GLEventListener
 				sideAxis.releaseCheck(e.getKeyCode());
 				verticalAxis.releaseCheck(e.getKeyCode());
 				
+				if(e.getKeyCode() == KeyEvent.VK_SPACE){
+					showAxis = !showAxis;
+				}
 			}
 			
 		});
@@ -111,7 +116,7 @@ public class Code extends JFrame implements GLEventListener
 			
 			https://docs.oracle.com/javase/7/docs/api/javax/swing/KeyStroke.html#getKeyStroke(char,%20boolean)
 			
-			
+			https://jogamp.org/deployment/jogamp-current/javadoc/jogl/javadoc_jogl_spec/com/jogamp/opengl/GL2ES2.html#glVertexAttribPointer(int,int,int,boolean,int,long)
 		
 		
 		//*/
@@ -123,7 +128,9 @@ public class Code extends JFrame implements GLEventListener
 		gl.glClear(GL_COLOR_BUFFER_BIT);
 		gl.glClear(GL_DEPTH_BUFFER_BIT);
 		elapsedTime = System.currentTimeMillis() - startTime;
-
+		
+		float frames = (float)elapsedTime/(float)3000;
+		
 		gl.glUseProgram(renderingProgram);
 
 		mvLoc = gl.glGetUniformLocation(renderingProgram, "mv_matrix");
@@ -142,26 +149,39 @@ public class Code extends JFrame implements GLEventListener
 		//Camera rotation radians needs to be done as a mod of 6.28319
 		//in order to ensure that the camera completes a full circle
 		cameraRotation = 6.28319f;
+		//https://www.geeksforgeeks.org/java-todegrees-method-example/
+		//https://www.tutorialspoint.com/java/number_abs.htm
 		
-		camYaw = (camYaw + yawTurnAxis.getValue())%cameraRotation; //Side to side
-		camPitch = (camPitch + pitchTurnAxis.getValue())%cameraRotation; //up down
+		camYaw = (camYaw + yawTurnAxis.getValue()*frames) % cameraRotation; //Side to side
+		
+		//We're going to limit the vertical axis to 90 and -90
+		camPitch = (camPitch + pitchTurnAxis.getValue()*frames); //up down
+		if(Math.abs(camPitch) > (Math.PI/2)-0.05f){
+			camPitch = (((float)Math.PI/2)-0.05f)*(camPitch/Math.abs(camPitch));
+		}
 		camRoll = 0f; //roll screen
 		
 		//Instead of having the angle assigned to the first values
 		//we can set the angle to 1f as the magnitude of change,
 		//and then assign a rotation angle to each axis
-		mvStack.rotate(1f,camPitch,camYaw,camRoll);
 		
-		/*
-		mvStack.rotate(camYaw, 0f, 1f, 0f);
-		mvStack.rotate(camPitch, 1f, 0f, 0f);
-		mvStack.rotate(camRoll,0f,0f,1f);
-		//*/
-		cameraZ += fwdAxis.getValue();
-		cameraY += verticalAxis.getValue();
-		cameraX += sideAxis.getValue();
+		cameraZ += fwdAxis.getValue()*frames;
+		cameraY += verticalAxis.getValue()*frames;
+		cameraX += sideAxis.getValue()*frames;
 		
 		mvStack.translate(-cameraX, -cameraY, -cameraZ);
+		
+		Vector3f cameraEye = new Vector3f(-cameraX, -cameraY, -cameraZ);
+		
+		Vector3f lookTarget = new Vector3f((float)Math.sin(camYaw)*1.0f, 0.0f, (float)Math.cos(camYaw)*1.0f*(float)Math.cos(camPitch));
+		
+		//For up down camera rotation we're going to fix the rotation to -90 and 90 as our bounds
+		lookTarget.add(new Vector3f(0f, (float)Math.sin(camPitch)*1.0f, 0f));
+		
+		lookTarget.add(cameraEye);
+		Vector3f upReference = new Vector3f(0,1,0);
+		
+		mvStack.setLookAt(cameraEye, lookTarget, upReference);
 		
 		tf = elapsedTime/1000.0;  // time factor
 		
@@ -174,18 +194,29 @@ public class Code extends JFrame implements GLEventListener
 		
 		//Then push rotations
 		mvStack.pushMatrix();
+		
+		if(showAxis){
+			
+			mvStack.translate(10f,0f,0f);
+			gl.glUniformMatrix4fv(mvLoc,1,false,mvStack.get(vals));
+			gl.glBindBuffer(GL_ARRAY_BUFFER, vbo[0]);
+			gl.glVertexAttribPointer(0,3,GL_FLOAT,false, 0,0);
+			gl.glEnableVertexAttribArray(0);
+			gl.glDrawArrays(GL_LINES, 0, 6);
+		}
 		mvStack.popMatrix();
 		mvStack.popMatrix();
 		//-----------------------  cube == planet  -- converted to 4-face pyramid
 		mvStack.pushMatrix();
-		mvStack.translate((float)Math.sin(tf)*4.0f, 0.0f, (float)Math.cos(tf)*4.0f);
+		mvStack.translate((float)Math.sin(tf*frames)*4.0f, 0.0f, (float)Math.cos(tf*frames)*4.0f);
 		mvStack.pushMatrix();
-		mvStack.rotate((float)tf*0.5f, 0.0f, 1.0f, 0.0f);
+		mvStack.rotate((float)tf*frames*0.5f, 0.0f, 1.0f, 0.0f);
 		gl.glUniformMatrix4fv(mvLoc, 1, false, mvStack.get(vals));
 		gl.glBindBuffer(GL_ARRAY_BUFFER, vbo[1]);
 		gl.glVertexAttribPointer(0, 3, GL_FLOAT, false, 0, 0);
 		gl.glEnableVertexAttribArray(0);
 		gl.glDrawArrays(GL_TRIANGLES, 0, 12);
+		
 		
 		mvStack.popMatrix();
 		mvStack.popMatrix();
@@ -193,9 +224,10 @@ public class Code extends JFrame implements GLEventListener
 		anvil.render(mvStack,pMat);
 		
 		glaidus.render(mvStack,pMat);
+		ringRune.render(mvStack,pMat);
 		
-		caltrop.rotate(new Vector3f(0,0.01f,0));
-		caltrop.setScale(new Vector3f((float)Math.sin(tf)*0.5f,(float)Math.sin(tf)*0.5f,(float)Math.sin(tf)*0.5f));
+		caltrop.rotate(new Vector3f(0,0.01f*frames,0));
+		caltrop.setScale(new Vector3f((float)Math.sin(tf*frames)*0.5f,(float)Math.sin(tf*frames)*0.5f,(float)Math.sin(tf*frames)*0.5f));
 		
 		caltrop.render(mvStack,pMat);
 		
@@ -226,11 +258,11 @@ public class Code extends JFrame implements GLEventListener
 		
 		//*/
 		
-		renderingProgram = Utils.createShaderProgram("code/vertShader.glsl", "code/fragShader.glsl");
+		renderingProgram = Utils.createShaderProgram("a2/vertShader.glsl", "a2/fragShader.glsl");
 		setupVertices();
 		
 		int simpleObjRenderer = Utils.createShaderProgram(
-			"code/objVertShader.glsl", "code/objFragShader.glsl"
+			"a2/objVertShader.glsl", "a2/objFragShader.glsl"
 		);
 		
 		//importing obj models
@@ -242,8 +274,11 @@ public class Code extends JFrame implements GLEventListener
 		
 		glaidus = new DrawableModel("Gladius_Single.obj","metal_bare_0012_01_s.jpg",simpleObjRenderer);
 		
+		ringRune = new DrawableModel("GroundRing.obj","RunicRingSegment.png",simpleObjRenderer);
+		
 		anvil.loadModelData();
 		anvil.setupVertices(vao,0);
+		anvil.translate(new Vector3f(0f,1f,0f));
 		
 		caltrop.loadModelData();
 		caltrop.setupVertices(vao,0);
@@ -253,6 +288,11 @@ public class Code extends JFrame implements GLEventListener
 		glaidus.setupVertices(vao,0);
 		glaidus.translate(new Vector3f(0,5f,0f));
 		glaidus.setScale(new Vector3f(0.2f,0.2f,0.2f));
+		
+		ringRune.loadModelData();
+		ringRune.setupVertices(vao,0);
+		ringRune.setScale(new Vector3f(6f,0f,6f));
+		ringRune.translate(new Vector3f(0f,-0.5f,0f));
 		
 		cameraX = 0.0f; cameraY = 0.0f; cameraZ = 12.0f;
 	}
@@ -265,19 +305,11 @@ public class Code extends JFrame implements GLEventListener
 		//*/
 		
 		
-		float[] cubePositions =
-		{	-1.0f,  1.0f, -1.0f, -1.0f, -1.0f, -1.0f, 1.0f, -1.0f, -1.0f,
-			1.0f, -1.0f, -1.0f, 1.0f,  1.0f, -1.0f, -1.0f,  1.0f, -1.0f,
-			1.0f, -1.0f, -1.0f, 1.0f, -1.0f,  1.0f, 1.0f,  1.0f, -1.0f,
-			1.0f, -1.0f,  1.0f, 1.0f,  1.0f,  1.0f, 1.0f,  1.0f, -1.0f,
-			1.0f, -1.0f,  1.0f, -1.0f, -1.0f,  1.0f, 1.0f,  1.0f,  1.0f,
-			-1.0f, -1.0f,  1.0f, -1.0f,  1.0f,  1.0f, 1.0f,  1.0f,  1.0f,
-			-1.0f, -1.0f,  1.0f, -1.0f, -1.0f, -1.0f, -1.0f,  1.0f,  1.0f,
-			-1.0f, -1.0f, -1.0f, -1.0f,  1.0f, -1.0f, -1.0f,  1.0f,  1.0f,
-			-1.0f, -1.0f,  1.0f,  1.0f, -1.0f,  1.0f,  1.0f, -1.0f, -1.0f,
-			1.0f, -1.0f, -1.0f, -1.0f, -1.0f, -1.0f, -1.0f, -1.0f,  1.0f,
-			-1.0f,  1.0f, -1.0f, 1.0f,  1.0f, -1.0f, 1.0f,  1.0f,  1.0f,
-			1.0f,  1.0f,  1.0f, -1.0f,  1.0f,  1.0f, -1.0f,  1.0f, -1.0f
+		float[] worldAxesPositions =
+		{	
+			1.0f,  0, 0, 0, 0, 0, 
+			0,  1.0f, 0, 0, 0, 0,
+			0,  0, 1.0f, 0, 0, 0, 
 		};
 		
 		float[] pyramidPositions =
@@ -292,7 +324,7 @@ public class Code extends JFrame implements GLEventListener
 		gl.glGenBuffers(vbo.length, vbo, 0);
 
 		gl.glBindBuffer(GL_ARRAY_BUFFER, vbo[0]);
-		FloatBuffer cubeBuf = Buffers.newDirectFloatBuffer(cubePositions);
+		FloatBuffer cubeBuf = Buffers.newDirectFloatBuffer(worldAxesPositions);
 		gl.glBufferData(GL_ARRAY_BUFFER, cubeBuf.limit()*4, cubeBuf, GL_STATIC_DRAW);
 		
 		gl.glBindBuffer(GL_ARRAY_BUFFER, vbo[1]);
